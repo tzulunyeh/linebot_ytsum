@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+celery
+redis
+yt-dlp
+pynvml
+google-generativeai
+line-bot-sdk
+python-dotenv
