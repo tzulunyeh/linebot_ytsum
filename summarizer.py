@@ -9,14 +9,14 @@ _MAX_LENGTH = 5000
 
 
 class GeminiSummarizer:
-    """使用 Google Gemini API 將文字摘要為繁體中文。"""
+    """Summarizes text into Traditional Chinese using the Gemini API."""
 
     def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash") -> None:
         genai.configure(api_key=api_key)
         self._model = genai.GenerativeModel(model_name)
 
     def summarize(self, text: str) -> Optional[str]:
-        """回傳摘要字串，失敗時回傳 None"""
+        """Return a summary string, or None on failure."""
         try:
             prompt = (
                 "請將以下文字做總結整理，"
@@ -26,10 +26,11 @@ class GeminiSummarizer:
             response = self._model.generate_content(prompt)
             return self._truncate(response.text)
         except Exception as e:
-            logger.error(f"總結失敗: {e}")
+            logger.error(f"Summarization failed: {e}")
             return None
 
     def _truncate(self, text: str) -> str:
+        """Truncate at the last newline within the limit to preserve Markdown."""
         if len(text) <= _MAX_LENGTH:
             return text
         cut_pos = text.rfind("\n", 0, _MAX_LENGTH)

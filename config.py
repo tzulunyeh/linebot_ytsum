@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 @dataclass
 class AppConfig:
-    """應用程式設定，集中管理所有環境變數。"""
+    """Centralizes all environment variable configuration."""
     gemini_api_key: str
     channel_access_token: str
     channel_secret: str
@@ -14,7 +14,7 @@ class AppConfig:
 
     @classmethod
     def from_env(cls) -> "AppConfig":
-        """從環境變數建立設定物件（替代建構子）"""
+        """Factory method: build config from environment variables."""
         load_dotenv()
         gemini_api_key = os.getenv("GEMINI_API_KEY")
         if not gemini_api_key:
@@ -26,5 +26,5 @@ class AppConfig:
         )
 
     def ensure_temp_dir(self) -> None:
-        """確保暫存目錄存在"""
+        """Create temp directory if it does not exist."""
         self.temp_dir.mkdir(exist_ok=True)

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class LineBotHandler:
-    """處理 LINE Webhook 事件。"""
+    """Handles incoming LINE webhook events."""
 
     _YOUTUBE_DOMAINS = ("youtube.com", "youtu.be")
 
@@ -25,14 +25,12 @@ class LineBotHandler:
         self._worker = worker
 
     def is_youtube_url(self, url: str) -> bool:
-        """檢查是否為有效 YouTube 網址"""
         return any(domain in url for domain in self._YOUTUBE_DOMAINS)
 
     def handle_message(self, event: MessageEvent) -> None:
-        """處理用戶傳入的文字訊息"""
         user_id = event.source.user_id
         text = event.message.text
-        logger.info(f"收到訊息 - user: {user_id}, text: {text}")
+        logger.info(f"Message received - user: {user_id}")
 
         if self.is_youtube_url(text):
             self._line_bot_api.reply_message(
@@ -47,6 +45,7 @@ class LineBotHandler:
             )
 
 
+# Bootstrap
 config = AppConfig.from_env()
 config.ensure_temp_dir()
 
@@ -78,7 +77,7 @@ async def root() -> dict:
 
 @app.post("/callback")
 async def callback(request: Request) -> dict:
-    """處理 LINE Webhook 回調"""
+    """Handle LINE webhook callback."""
     signature = request.headers.get("X-Line-Signature")
     body = await request.body()
     try:

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class YouTubeDownloader:
-    """從 YouTube 下載音檔並轉換為 WAV。"""
+    """Downloads audio from YouTube and converts it to WAV."""
 
     _VIDEO_ID_PATTERN = re.compile(r"(?:v=|\/)([0-9A-Za-z_-]{11})")
 
@@ -16,15 +16,15 @@ class YouTubeDownloader:
         self._output_dir = output_dir
 
     def extract_video_id(self, url: str) -> Optional[str]:
-        """從 URL 擷取 YouTube 影片 ID"""
+        """Extract the 11-character video ID from a YouTube URL."""
         match = self._VIDEO_ID_PATTERN.search(url)
         return match.group(1) if match else None
 
     def download(self, url: str) -> Optional[Path]:
-        """下載音檔並轉換為 WAV，回傳檔案路徑；失敗時回傳 None"""
+        """Download audio and return the WAV file path, or None on failure."""
         video_id = self.extract_video_id(url)
         if not video_id:
-            logger.error(f"無效的 YouTube URL: {url}")
+            logger.error(f"Invalid YouTube URL: {url}")
             return None
 
         output_path = self._output_dir / video_id
@@ -42,5 +42,5 @@ class YouTubeDownloader:
                 ydl.download([url])
             return output_path.with_suffix(".wav")
         except Exception as e:
-            logger.error(f"下載失敗: {e}")
+            logger.error(f"Download failed: {e}")
             return None
