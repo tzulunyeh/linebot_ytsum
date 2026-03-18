@@ -3,7 +3,6 @@ import time
 from typing import Optional
 from faster_whisper import WhisperModel
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

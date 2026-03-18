@@ -15,14 +15,14 @@ class YouTubeDownloader:
     def __init__(self, output_dir: Path) -> None:
         self._output_dir = output_dir
 
-    def extract_video_id(self, url: str) -> Optional[str]:
+    def _extract_video_id(self, url: str) -> Optional[str]:
         """Extract the 11-character video ID from a YouTube URL."""
         match = self._VIDEO_ID_PATTERN.search(url)
         return match.group(1) if match else None
 
     def download(self, url: str) -> Optional[Path]:
         """Download audio and return the WAV file path, or None on failure."""
-        video_id = self.extract_video_id(url)
+        video_id = self._extract_video_id(url)
         if not video_id:
             logger.error(f"Invalid YouTube URL: {url}")
             return None

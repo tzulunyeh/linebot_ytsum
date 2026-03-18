@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
@@ -83,7 +83,7 @@ async def callback(request: Request) -> dict:
     try:
         webhook_handler.handle(body.decode(), signature)
     except InvalidSignatureError:
-        return {"status": "Invalid signature"}, 400
+        raise HTTPException(status_code=400, detail="Invalid signature")
     return {"status": "OK"}
 
 
