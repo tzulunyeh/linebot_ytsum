@@ -1,125 +1,66 @@
-import os
-import time
 import logging
 from queue import Queue
 from threading import Thread
-import multiprocessing as mp
-from multiprocessing import Process, Queue as MPQueue
+from typing import Optional
 
-from youtube_downloader import download_audio
-from transcription import transcribe_audio
-from summarizer import summarize_text
-from config import CHANNEL_ACCESS_TOKEN
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
 
-logging.basicConfig(level=logging.INFO)
+from pipeline import ProcessingPipeline
+
 logger = logging.getLogger(__name__)
 
-line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 
-def transcribe_wrapper(audio_path, queue):
-    """在獨立進程中執行轉錄，並將結果放入佇列"""
-    result = transcribe_audio(audio_path)
-    queue.put(result)
+class TaskWorker:
+    """管理任務佇列與背景工作執行緒。
 
-def process_task(user_id: str, url: str):
-    """順序處理任務：下載、轉錄、總結"""
-    try:
+    示範 OOP 概念：
+    - 封裝 (Encapsulation)：queue 和 thread 隱藏在 instance 內，外部只能呼叫 submit()
+    - 組合 (Composition)：持有 ProcessingPipeline 和 LineBotApi，不繼承它們
+    - 依賴注入 (DI)：pipeline 和 line_bot_api 從外部傳入
+    - 單一職責 (SRP)：只負責排程與訊息推送，處理邏輯交給 pipeline
+    """
+
+    def __init__(self, pipeline: ProcessingPipeline, line_bot_api: LineBotApi) -> None:
+        self._pipeline = pipeline
+        self._line_bot_api = line_bot_api
+        self._queue: Queue = Queue()
+        self._thread = Thread(target=self._worker_loop, daemon=True)
+
+    def start(self) -> None:
+        """啟動背景工作執行緒"""
+        self._thread.start()
+
+    def submit(self, user_id: str, url: str) -> None:
+        """提交任務到佇列（非阻塞）"""
+        self._queue.put((user_id, url))
+
+    def _worker_loop(self) -> None:
+        """背景執行緒持續消費佇列中的任務"""
+        while True:
+            user_id, url = self._queue.get()
+            self._process(user_id, url)
+            self._queue.task_done()
+
+    def _process(self, user_id: str, url: str) -> None:
+        """執行單一任務並將結果推送給用戶"""
         logger.info(f"開始處理任務 - URL: {url}")
-
-        # 下載音檔（最多重試 3 次）
-        audio_path = None
-        for attempt in range(3):
-            logger.info(f"嘗試下載音檔 (第 {attempt + 1} 次)")
-            audio_path = download_audio(url)
-            if audio_path:
-                logger.info(f"下載成功: {audio_path}")
-                break
-            time.sleep(2)
-        if not audio_path:
-            logger.error("下載失敗")
-            try:
-                line_bot_api.push_message(user_id, TextSendMessage(text="無法下載音檔"))
-            except Exception as e:
-                logger.error(f"推送訊息失敗: {e}")
-            return
-
-        # 轉錄音檔
-        logger.info("開始轉錄音檔")
-        logger.info("audio_path: " + audio_path)
-        
         try:
-            mp.set_start_method('spawn', force=True)
-        except RuntimeError:
-            pass
-        
-        mp_queue = MPQueue()
-        p = Process(target=transcribe_wrapper, args=(audio_path, mp_queue))
-        p.start()
-        p.join()
-        
-        if p.exitcode != 0:
-            logger.error("轉錄進程失敗")
-            try:
-                line_bot_api.push_message(user_id, TextSendMessage(text="轉錄失敗，請稍後再試"))
-            except Exception as e:
-                logger.error(f"推送訊息失敗: {e}")
-            os.remove(audio_path)
-            return
-        
-        transcription = mp_queue.get()
-        if not transcription:
-            logger.error("轉錄失敗")
-            try:
-                line_bot_api.push_message(user_id, TextSendMessage(text="轉錄失敗，請稍後再試"))
-            except Exception as e:
-                logger.error(f"推送訊息失敗: {e}")
-            os.remove(audio_path)
-            return
+            result, error = self._pipeline.process(url)
+            if error:
+                self._push(user_id, error)
+                return
+            self._push(user_id, result)
+            self._push(user_id, "處理完成，感謝使用！")
+        except Exception as e:
+            logger.error(f"任務處理失敗: {e}")
+            self._push(user_id, "處理失敗，請稍後再試")
 
-        # 刪除臨時音檔
-        os.remove(audio_path)
-        logger.info("已刪除臨時音檔")
-
-        # 總結文字（最多重試 3 次）
-        logger.info("開始生成摘要")
-        summary = None
-        for attempt in range(3):
-            logger.info(f"嘗試生成摘要 (第 {attempt + 1} 次)")
-            summary = summarize_text(transcription)
-            if summary:
-                logger.info("摘要生成成功")
-                break
-            time.sleep(2)
-        
-        text_to_send = summary if summary else transcription + "\n\n（無法總結）"
+    def _push(self, user_id: str, text: Optional[str]) -> None:
+        """推送訊息給 LINE 用戶，失敗時只記錄 log"""
+        if not text:
+            return
         try:
-            logger.info("推送處理結果")
-            line_bot_api.push_message(user_id, TextSendMessage(text=text_to_send))
-            logger.info("推送完成訊息")
-            line_bot_api.push_message(user_id, TextSendMessage(text="處理完成，感謝使用！"))
+            self._line_bot_api.push_message(user_id, TextSendMessage(text=text))
         except Exception as e:
             logger.error(f"推送訊息失敗: {e}")
-    except Exception as exc:
-        logger.error(f"任務處理失敗: {exc}")
-        try:
-            line_bot_api.push_message(user_id, TextSendMessage(text="處理失敗，請稍後再試"))
-        except Exception as e:
-            logger.error(f"推送錯誤訊息失敗: {e}")
-
-# 建立任務佇列與工作執行緒（一次只處理一個任務）
-task_queue = Queue()
-
-def task_worker():
-    while True:
-        user_id, url = task_queue.get()
-        process_task(user_id, url)
-        task_queue.task_done()
-
-worker_thread = Thread(target=task_worker, daemon=True)
-worker_thread.start()
-
-def submit_task(user_id: str, url: str):
-    """提交任務至佇列"""
-    task_queue.put((user_id, url))
