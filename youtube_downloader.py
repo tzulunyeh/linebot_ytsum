@@ -8,13 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class YouTubeDownloader:
-    """負責從 YouTube 下載音檔。
-
-    示範 OOP 概念：
-    - 封裝 (Encapsulation)：output_dir 儲存在 instance 內，不從外部傳入每次呼叫
-    - 單一職責 (SRP)：只負責下載，不處理轉錄或摘要
-    - 私有屬性：_output_dir 以底線開頭，表示內部實作細節
-    """
+    """從 YouTube 下載音檔並轉換為 WAV。"""
 
     _VIDEO_ID_PATTERN = re.compile(r"(?:v=|\/)([0-9A-Za-z_-]{11})")
 

@@ -16,13 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class LineBotHandler:
-    """處理 LINE Webhook 事件。
-
-    示範 OOP 概念：
-    - 封裝 (Encapsulation)：line_bot_api 和 worker 隱藏在 instance 內
-    - 單一職責 (SRP)：只負責判斷訊息類型與回覆，任務處理交給 worker
-    - 依賴注入 (DI)：line_bot_api 和 worker 從外部傳入
-    """
+    """處理 LINE Webhook 事件。"""
 
     _YOUTUBE_DOMAINS = ("youtube.com", "youtu.be")
 
@@ -53,10 +47,6 @@ class LineBotHandler:
             )
 
 
-# ── 應用程式啟動（Composition Root）──────────────────────────────────────────
-# 所有物件在這裡組裝，展示依賴注入：每個物件只宣告它需要什麼，
-# 由最外層（main.py）負責建立並傳入依賴。
-
 config = AppConfig.from_env()
 config.ensure_temp_dir()
 
@@ -72,8 +62,6 @@ worker = TaskWorker(pipeline=pipeline, line_bot_api=line_bot_api)
 worker.start()
 
 bot_handler = LineBotHandler(line_bot_api=line_bot_api, worker=worker)
-
-# ── FastAPI 路由（薄層，只負責 HTTP 處理）────────────────────────────────────
 
 app = FastAPI()
 

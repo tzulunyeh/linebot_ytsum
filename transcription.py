@@ -8,14 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class Transcriber:
-    """負責將音檔轉錄為文字。
-
-    示範 OOP 概念：
-    - 封裝 (Encapsulation)：model 存在 instance 內部，外部不需知道細節
-    - 單一職責 (SRP)：只負責轉錄，不處理下載或摘要
-
-    注意：模型與轉錄邏輯保持原樣不變。
-    """
+    """將音檔轉錄為文字。"""
 
     def __init__(self, model_name: str = "deepdml/faster-whisper-large-v3-turbo-ct2") -> None:
         self._model = WhisperModel(model_name)

@@ -6,13 +6,7 @@ from dotenv import load_dotenv
 
 @dataclass
 class AppConfig:
-    """應用程式設定，封裝所有環境變數。
-
-    示範 OOP 概念：
-    - 封裝 (Encapsulation)：設定值集中在一個物件，不散落為全域變數
-    - Dataclass：自動產生 __init__、__repr__ 等方法
-    - Classmethod factory：from_env() 作為替代建構子
-    """
+    """應用程式設定，集中管理所有環境變數。"""
     gemini_api_key: str
     channel_access_token: str
     channel_secret: str

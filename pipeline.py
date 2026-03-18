@@ -7,7 +7,7 @@ from multiprocessing import Queue as MPQueue
 from pathlib import Path
 from typing import Optional, Tuple
 
-from summarizer import BaseSummarizer
+from summarizer import GeminiSummarizer
 from youtube_downloader import YouTubeDownloader
 
 logger = logging.getLogger(__name__)
@@ -26,14 +26,7 @@ def _transcription_subprocess_target(audio_path_str: str, result_queue: MPQueue)
 
 
 class ProcessingPipeline:
-    """串接下載、轉錄、摘要的完整處理流程。
-
-    示範 OOP 概念：
-    - 組合 (Composition)：持有 downloader、summarizer 物件，不繼承它們
-    - 依賴注入 (DI)：依賴從建構子傳入，方便替換實作或測試
-    - 單一職責 (SRP)：只負責串接流程，不包含 LINE 訊息推送
-    - 封裝：retry 邏輯等細節隱藏在私有方法中
-    """
+    """串接下載、轉錄、摘要的完整處理流程。"""
 
     MAX_RETRIES = 3
     RETRY_DELAY = 2
@@ -41,17 +34,13 @@ class ProcessingPipeline:
     def __init__(
         self,
         downloader: YouTubeDownloader,
-        summarizer: BaseSummarizer,
+        summarizer: GeminiSummarizer,
     ) -> None:
         self._downloader = downloader
         self._summarizer = summarizer
 
     def process(self, url: str) -> Tuple[Optional[str], Optional[str]]:
-        """執行完整流程，回傳 (result_text, error_message)。
-
-        成功時：(摘要文字, None)
-        失敗時：(None, 錯誤訊息)
-        """
+        """執行完整流程，回傳 (result_text, error_message)"""
         audio_path = self._download_with_retry(url)
         if not audio_path:
             return None, "無法下載音檔"

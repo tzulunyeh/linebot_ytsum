@@ -12,14 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class TaskWorker:
-    """管理任務佇列與背景工作執行緒。
-
-    示範 OOP 概念：
-    - 封裝 (Encapsulation)：queue 和 thread 隱藏在 instance 內，外部只能呼叫 submit()
-    - 組合 (Composition)：持有 ProcessingPipeline 和 LineBotApi，不繼承它們
-    - 依賴注入 (DI)：pipeline 和 line_bot_api 從外部傳入
-    - 單一職責 (SRP)：只負責排程與訊息推送，處理邏輯交給 pipeline
-    """
+    """管理任務佇列與背景工作執行緒，一次處理一個任務。"""
 
     def __init__(self, pipeline: ProcessingPipeline, line_bot_api: LineBotApi) -> None:
         self._pipeline = pipeline
