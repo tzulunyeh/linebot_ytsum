@@ -1,22 +1,30 @@
 import os
+from dataclasses import dataclass, field
+from pathlib import Path
 from dotenv import load_dotenv
 
-# 載入 .env 檔案
-load_dotenv()
 
-#print("CHANNEL_ACCESS_TOKEN:", os.getenv('CHANNEL_ACCESS_TOKEN'))
+@dataclass
+class AppConfig:
+    """Centralizes all environment variable configuration."""
+    gemini_api_key: str
+    channel_access_token: str
+    channel_secret: str
+    temp_dir: Path = field(default_factory=lambda: Path("temp_audio"))
 
-# Gemini API 金鑰
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY not found in environment variables")
+    @classmethod
+    def from_env(cls) -> "AppConfig":
+        """Factory method: build config from environment variables."""
+        load_dotenv()
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key:
+            raise ValueError("GEMINI_API_KEY not found in environment variables")
+        return cls(
+            gemini_api_key=gemini_api_key,
+            channel_access_token=os.getenv("CHANNEL_ACCESS_TOKEN", ""),
+            channel_secret=os.getenv("CHANNEL_SECRET", ""),
+        )
 
-# Line Bot 設定
-CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
-CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
-
-# 臨時音檔儲存目錄
-TEMP_DIR = 'temp_audio'
-
-# 確保臨時目錄存在
-os.makedirs(TEMP_DIR, exist_ok=True)
+    def ensure_temp_dir(self) -> None:
+        """Create temp directory if it does not exist."""
+        self.temp_dir.mkdir(exist_ok=True)

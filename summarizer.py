@@ -1,27 +1,37 @@
-import google.generativeai as genai
-from google.generativeai import GenerativeModel
-from config import GEMINI_API_KEY
+import logging
 from typing import Optional
 
-# 設定 API 金鑰
-genai.configure(api_key=GEMINI_API_KEY)
+import google.generativeai as genai
 
-model = GenerativeModel("gemini-2.0-flash")
+logger = logging.getLogger(__name__)
 
-def summarize_text(text: str) -> Optional[str]:
-    """總結文字為繁體中文，字數不超過5000。
-    
-    若摘要超過限制，會嘗試在最後一個換行符處截斷，避免破壞 Markdown 語法。
-    """
-    try:
-        prompt = f"請將以下文字做總結整理，使用繁體中文（台灣用法），字數不超過5000字，使用Markdown格式：{text}"
-        response = model.generate_content(prompt)
-        summary = response.text
-        if len(summary) <= 5000:
-            return summary
+_MAX_LENGTH = 5000
 
-        cut_pos = summary.rfind('\n', 0, 5000)
-        return summary[:cut_pos] if cut_pos != -1 else summary[:5000]
-    except Exception as e:
-        print(f"總結失敗: {e}")
-        return None
+
+class GeminiSummarizer:
+    """Summarizes text into Traditional Chinese using the Gemini API."""
+
+    def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash") -> None:
+        genai.configure(api_key=api_key)
+        self._model = genai.GenerativeModel(model_name)
+
+    def summarize(self, text: str) -> Optional[str]:
+        """Return a summary string, or None on failure."""
+        try:
+            prompt = (
+                "請將以下文字做總結整理，"
+                "使用繁體中文（台灣用法），"
+                f"字數不超過{_MAX_LENGTH}字，使用Markdown格式：{text}"
+            )
+            response = self._model.generate_content(prompt)
+            return self._truncate(response.text)
+        except Exception as e:
+            logger.error(f"Summarization failed: {e}")
+            return None
+
+    def _truncate(self, text: str) -> str:
+        """Truncate at the last newline within the limit to preserve Markdown."""
+        if len(text) <= _MAX_LENGTH:
+            return text
+        cut_pos = text.rfind("\n", 0, _MAX_LENGTH)
+        return text[:cut_pos] if cut_pos != -1 else text[:_MAX_LENGTH]
